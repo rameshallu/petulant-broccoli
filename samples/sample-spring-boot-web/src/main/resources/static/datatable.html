@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>CRUD datatable sample</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+  </head>
+  <body>
+
+    <div class="container pt-5">
+      <table id="persons">
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Gender</th>
+            <th>Country</th>
+          </tr>
+        </thead>
+      </table>
+
+            <!-- Large modal -->
+      <button id="add-new" class="btn btn-primary">Add New</button>
+
+      <div id="person-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="modal-title">Add New</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <form>
+                <div class="form-group">
+                  <label for="person_id" class="form-control-label">Id:</label>
+                  <input type="text" class="form-control" id="person_id">
+                </div>
+                <div class="form-group">
+                  <label for="person_name" class="form-control-label">Name:</label>
+                  <input type="text" class="form-control" id="person_name">
+                </div>
+                <div class="form-group">
+                  <label for="person_gender" class="form-control-label">Gender:</label>
+                  <select id="person_gender" class="form-control">
+                    <option selected>Choose...</option>
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="person_country" class="form-control-label">Country:</label>
+                  <select id="person_country" class="form-control">
+                    <option selected>Choose...</option>
+                    <option value="US">United States</option>
+                    <option value="HK">Hong Kong</option>
+                    <option value="IN">India</option>
+                    <option value="UK">United Kingdom</option>
+                  </select>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer">
+              <span id="modal-message"></span>
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              <button id="modal-save" type="submit" class="btn btn-primary">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script
+      src="https://code.jquery.com/jquery-3.2.1.min.js"
+      integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+      crossorigin="anonymous">
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+  </body>
+    <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js" charset="utf-8"></script>
+    <script type="text/javascript">
+      $(document).ready(function(){
+        var personApiBaseUrl = 'http://localhost:8080/api/person/';
+        // var personApiBaseUrl = '/api/person/';
+
+        var table = null;
+        var loadPersons = function() {
+          $.get(personApiBaseUrl + 'all', function(data) {
+              var tbody = $('<tbody></tbody>');
+              $.each(data, function(i, person) {
+                var editButton = $('<button></button>').addClass('btn').text('Edit').attr('data-id', person.id);
+                editButton.click(function() {
+                  var id = $(this).attr('data-id');
+                  var $editButton = this;
+                  $.get(personApiBaseUrl + id, function(data) {
+                    $('#modal-title').text('Edit Person');
+                    $('#modal-message').text('');
+                    $('#modal-save').attr('data-operation', 'edit');
+                    $('#person_id').val(data.id).prop('disabled', true);;
+                    $('#person_name').val(data.name);
+                    $('#person_gender').val(data.gender);
+                    $('#person_country').val(data.country);
+                    $('#person-modal').modal('show');
+                    $('#modal-save').click(function() {
+                      if ($(this).attr('data-operation') != 'edit') {
+                        return;
+                      }
+                      var person = {};
+                      person.id = $('#person_id').val();
+                      person.name = $('#person_name').val();
+                      person.gender = $('#person_gender').val();
+                      person.country = $('#person_country').val();
+                      console.log(person);
+                      $.post(personApiBaseUrl + 'save', person)
+                        .done(function(data) {
+                          $('#modal-message').addClass('text-success').text('Saved successfully');
+                          var tds = $($editButton).parent().siblings().toArray();
+                          tds[0].innerHTML = data.id;
+                          tds[1].innerHTML = data.name;
+                          tds[2].innerHTML = data.gender;
+                          tds[3].innerHTML = data.country;
+                        });
+                    });
+                  });
+                });
+                var delButton = $('<button></button>').addClass('btn').text('Delete').attr('data-id', person.id);
+                delButton.click(function() {
+                  var id = $(this).attr('data-id');
+                  var $delButton = this;
+                  $.ajax({
+                    url: personApiBaseUrl + id,
+                    type: 'DELETE',
+                    success: function(data) {
+                      // $($delButton).parent().parent().remove();
+                      loadPersons();
+                    }
+                  });
+                });
+
+                var tr = $('<tr></tr>');
+                tr.append($('<td></td>').append(editButton).append(delButton));
+                tr.append($('<td></td>').text(person.id));
+                tr.append($('<td></td>').text(person.name));
+                tr.append($('<td></td>').text(person.gender));
+                tr.append($('<td></td>').text(person.country));
+                tbody.append(tr);
+              });
+              $('#persons > tbody').remove();
+              $('#persons').append(tbody);
+              if (table != null) {
+                table.destroy();
+              }
+              table = $('#persons').DataTable();
+
+
+          });
+        };
+
+        loadPersons();
+
+        // Add new person
+        $('#add-new').click(function() {
+          $('#modal-title').text('Add Person');
+          $('#modal-message').text('');
+          $('#modal-save').attr('data-operation', 'add');
+          $('#person_id').val('').prop('disabled', false);
+          $('#person_name').val('');
+          $('#person_gender').prop('selectedIndex',0);
+          $('#person_country').prop('selectedIndex',0);
+          $('#person-modal').modal('show');
+          $('#modal-save').click(function() {
+            if ($(this).attr('data-operation') != 'add') {
+              return;
+            }
+            var person = {};
+            person.id = $('#person_id').val();
+            person.name = $('#person_name').val();
+            person.gender = $('#person_gender').val();
+            person.country = $('#person_country').val();
+            console.log(person);
+            $.post(personApiBaseUrl + 'save', person)
+              .done(function(data) {
+                $('#modal-message').addClass('text-success').text('Created successfully');
+                loadPersons();
+              });
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
